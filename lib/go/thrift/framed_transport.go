@@ -28,8 +28,6 @@ import (
 	"io"
 )
 
-const DEFAULT_MAX_LENGTH = 16384000
-
 type TFramedTransport struct {
 	transport TTransport
 	buf       bytes.Buffer
@@ -42,14 +40,25 @@ type TFramedTransport struct {
 type tFramedTransportFactory struct {
 	factory   TTransportFactory
 	maxLength uint32
+
+	config *TConfiguration
 }
 
 func NewTFramedTransportFactory(factory TTransportFactory) TTransportFactory {
-	return &tFramedTransportFactory{factory: factory, maxLength: DEFAULT_MAX_LENGTH}
+	return NewTFramedTransportWithConfiguration(factory, defaultConfiguration)
 }
 
+// Deprecated: Use NewTFramedTransportWithConfiguration
 func NewTFramedTransportFactoryMaxLength(factory TTransportFactory, maxLength uint32) TTransportFactory {
-	return &tFramedTransportFactory{factory: factory, maxLength: maxLength}
+	tc := NewTConfiguration().WithMaxFrameLength(maxLength)
+	return NewTFramedTransportWithConfiguration(factory, tc)
+}
+
+func NewTFramedTransportWithConfiguration(factory TTransportFactory, config *TConfiguration) TTransportFactory {
+	return &tFramedTransportFactory{
+		factory: factory,
+		config:  config,
+	}
 }
 
 func (p *tFramedTransportFactory) GetTransport(base TTransport) (TTransport, error) {
@@ -57,11 +66,15 @@ func (p *tFramedTransportFactory) GetTransport(base TTransport) (TTransport, err
 	if err != nil {
 		return nil, err
 	}
-	return NewTFramedTransportMaxLength(tt, p.maxLength), nil
+	return NewTFramedTransportMaxLength(tt, p.config.maxFrameLength), nil
+}
+
+func (p *tFramedTransportFactory) GetConfiguration() *TConfiguration {
+	return p.config
 }
 
 func NewTFramedTransport(transport TTransport) *TFramedTransport {
-	return &TFramedTransport{transport: transport, reader: bufio.NewReader(transport), maxLength: DEFAULT_MAX_LENGTH}
+	return &TFramedTransport{transport: transport, reader: bufio.NewReader(transport), maxLength: defaultConfiguration.maxFrameLength}
 }
 
 func NewTFramedTransportMaxLength(transport TTransport, maxLength uint32) *TFramedTransport {
@@ -184,4 +197,8 @@ func (p *TFramedTransport) readFrameHeader() (uint32, error) {
 
 func (p *TFramedTransport) RemainingBytes() (num_bytes uint64) {
 	return uint64(p.frameSize)
+}
+
+func (p *TFramedTransport) BytesAvailable(count int64) bool {
+	return p.transport.BytesAvailable(count)
 }

@@ -25,6 +25,7 @@ package thrift
 // a BufferedTransport from the underlying base transport)
 type TTransportFactory interface {
 	GetTransport(trans TTransport) (TTransport, error)
+	GetConfiguration() *TConfiguration
 }
 
 type tTransportFactory struct{}
@@ -32,6 +33,10 @@ type tTransportFactory struct{}
 // Return a wrapped instance of the base Transport.
 func (p *tTransportFactory) GetTransport(trans TTransport) (TTransport, error) {
 	return trans, nil
+}
+
+func (p *tTransportFactory) GetConfiguration() *TConfiguration {
+	return defaultConfiguration
 }
 
 func NewTTransportFactory() TTransportFactory {

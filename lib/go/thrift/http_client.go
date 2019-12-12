@@ -29,12 +29,8 @@ import (
 	"strconv"
 )
 
-// Default to using the shared http client. Library users are
-// free to change this global client or specify one through
-// THttpClientOptions.
-var DefaultHttpClient *http.Client = http.DefaultClient
-
 type THttpClient struct {
+	*TBaseTransport
 	client             *http.Client
 	response           *http.Response
 	url                *url.URL
@@ -45,49 +41,73 @@ type THttpClient struct {
 }
 
 type THttpClientTransportFactory struct {
-	options THttpClientOptions
-	url     string
+	url string
+
+	config *TConfiguration
 }
 
 func (p *THttpClientTransportFactory) GetTransport(trans TTransport) (TTransport, error) {
 	if trans != nil {
 		t, ok := trans.(*THttpClient)
 		if ok && t.url != nil {
-			return NewTHttpClientWithOptions(t.url.String(), p.options)
+			return NewTHttpClientWithConfiguration(t.url.String(), p.config)
 		}
 	}
-	return NewTHttpClientWithOptions(p.url, p.options)
+	return NewTHttpClientWithConfiguration(p.url, p.config)
 }
 
+func (p *THttpClientTransportFactory) GetConfiguration() *TConfiguration {
+	return p.config
+}
+
+// Deprecated: Use TConfiguration instead
 type THttpClientOptions struct {
-	// If nil, DefaultHttpClient is used
+	// If nil, defaultConfiguration.httpClient is used
 	Client *http.Client
 }
 
 func NewTHttpClientTransportFactory(url string) *THttpClientTransportFactory {
-	return NewTHttpClientTransportFactoryWithOptions(url, THttpClientOptions{})
+	return NewTHttpClientTransportFactoryWithConfiguration(url, defaultConfiguration)
 }
 
+// Deprecated: Use NewTHttpClientTransportFactoryWithConfiguration instead
 func NewTHttpClientTransportFactoryWithOptions(url string, options THttpClientOptions) *THttpClientTransportFactory {
-	return &THttpClientTransportFactory{url: url, options: options}
+	f := NewTHttpClientTransportFactory(url)
+	if options.Client != nil {
+		f.config.httpClient = options.Client
+	}
+	return f
 }
 
-func NewTHttpClientWithOptions(urlstr string, options THttpClientOptions) (TTransport, error) {
+func NewTHttpClientTransportFactoryWithConfiguration(url string, config *TConfiguration) *THttpClientTransportFactory {
+	return &THttpClientTransportFactory{url: url, config: config}
+}
+
+func NewTHttpClientWithConfiguration(urlstr string, config *TConfiguration) (TTransport, error) {
 	parsedURL, err := url.Parse(urlstr)
 	if err != nil {
 		return nil, err
 	}
 	buf := make([]byte, 0, 1024)
-	client := options.Client
-	if client == nil {
-		client = DefaultHttpClient
-	}
 	httpHeader := map[string][]string{"Content-Type": {"application/x-thrift"}}
-	return &THttpClient{client: client, url: parsedURL, requestBuffer: bytes.NewBuffer(buf), header: httpHeader}, nil
+	return &THttpClient{TBaseTransport: NewTBaseTransport(config), client: config.httpClient, url: parsedURL, requestBuffer: bytes.NewBuffer(buf), header: httpHeader}, nil
+}
+
+// Deprecated: Use NewTHttpClientWithConfiguration instead
+func NewTHttpClientWithOptions(urlstr string, options THttpClientOptions) (TTransport, error) {
+	f, err := NewTHttpClient(urlstr)
+	if err != nil {
+		return nil, err
+	}
+
+	if options.Client != nil {
+		f.(*THttpClient).client = options.Client
+	}
+	return f, nil
 }
 
 func NewTHttpClient(urlstr string) (TTransport, error) {
-	return NewTHttpClientWithOptions(urlstr, THttpClientOptions{})
+	return NewTHttpClientWithConfiguration(urlstr, defaultConfiguration)
 }
 
 // Set the HTTP Header for this specific Thrift Transport
@@ -219,24 +239,4 @@ func (p *THttpClient) RemainingBytes() (num_bytes uint64) {
 
 	const maxSize = ^uint64(0)
 	return maxSize // the truth is, we just don't know unless framed is used
-}
-
-// Deprecated: Use NewTHttpClientTransportFactory instead.
-func NewTHttpPostClientTransportFactory(url string) *THttpClientTransportFactory {
-	return NewTHttpClientTransportFactoryWithOptions(url, THttpClientOptions{})
-}
-
-// Deprecated: Use NewTHttpClientTransportFactoryWithOptions instead.
-func NewTHttpPostClientTransportFactoryWithOptions(url string, options THttpClientOptions) *THttpClientTransportFactory {
-	return NewTHttpClientTransportFactoryWithOptions(url, options)
-}
-
-// Deprecated: Use NewTHttpClientWithOptions instead.
-func NewTHttpPostClientWithOptions(urlstr string, options THttpClientOptions) (TTransport, error) {
-	return NewTHttpClientWithOptions(urlstr, options)
-}
-
-// Deprecated: Use NewTHttpClient instead.
-func NewTHttpPostClient(urlstr string) (TTransport, error) {
-	return NewTHttpClientWithOptions(urlstr, THttpClientOptions{})
 }

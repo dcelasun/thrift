@@ -26,23 +26,39 @@ import (
 
 type TBufferedTransportFactory struct {
 	size int
+
+	config *TConfiguration
 }
 
 type TBufferedTransport struct {
+	*TBaseTransport
 	bufio.ReadWriter
 	tp TTransport
 }
 
 func (p *TBufferedTransportFactory) GetTransport(trans TTransport) (TTransport, error) {
-	return NewTBufferedTransport(trans, p.size), nil
+	return NewTBufferedTransportWithConfiguration(trans, p.size, p.config), nil
+}
+
+func (p *TBufferedTransportFactory) GetConfiguration() *TConfiguration {
+	return p.config
 }
 
 func NewTBufferedTransportFactory(bufferSize int) *TBufferedTransportFactory {
-	return &TBufferedTransportFactory{size: bufferSize}
+	return NewTBufferedTransportFactoryWithConfiguration(bufferSize, defaultConfiguration)
+}
+
+func NewTBufferedTransportFactoryWithConfiguration(bufferSize int, config *TConfiguration) *TBufferedTransportFactory {
+	return &TBufferedTransportFactory{size: bufferSize, config: config}
 }
 
 func NewTBufferedTransport(trans TTransport, bufferSize int) *TBufferedTransport {
+	return NewTBufferedTransportWithConfiguration(trans, bufferSize, defaultConfiguration)
+}
+
+func NewTBufferedTransportWithConfiguration(trans TTransport, bufferSize int, config *TConfiguration) *TBufferedTransport {
 	return &TBufferedTransport{
+		TBaseTransport: NewTBaseTransport(config),
 		ReadWriter: bufio.ReadWriter{
 			Reader: bufio.NewReaderSize(trans, bufferSize),
 			Writer: bufio.NewWriterSize(trans, bufferSize),

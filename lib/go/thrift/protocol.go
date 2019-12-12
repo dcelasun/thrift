@@ -80,12 +80,9 @@ type TProtocol interface {
 	Transport() TTransport
 }
 
-// The maximum recursive depth the skip() function will traverse
-const DEFAULT_RECURSION_DEPTH = 64
-
 // Skips over the next data element from the provided input TProtocol object.
 func SkipDefaultDepth(prot TProtocol, typeId TType) (err error) {
-	return Skip(prot, typeId, DEFAULT_RECURSION_DEPTH)
+	return Skip(prot, typeId, defaultConfiguration.recursionDepth)
 }
 
 // Skips over the next data element from the provided input TProtocol object.

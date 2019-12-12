@@ -26,26 +26,37 @@ import (
 
 // Memory buffer-based implementation of the TTransport interface.
 type TMemoryBuffer struct {
+	*TBaseTransport
 	*bytes.Buffer
 	size int
 }
 
 type TMemoryBufferTransportFactory struct {
 	size int
+
+	config *TConfiguration
 }
 
 func (p *TMemoryBufferTransportFactory) GetTransport(trans TTransport) (TTransport, error) {
 	if trans != nil {
 		t, ok := trans.(*TMemoryBuffer)
 		if ok && t.size > 0 {
-			return NewTMemoryBufferLen(t.size), nil
+			return NewTMemoryBufferLenWithConfiguration(t.size, p.config), nil
 		}
 	}
-	return NewTMemoryBufferLen(p.size), nil
+	return NewTMemoryBufferLenWithConfiguration(p.size, p.config), nil
+}
+
+func (p *TMemoryBufferTransportFactory) GetConfiguration() *TConfiguration {
+	return p.config
 }
 
 func NewTMemoryBufferTransportFactory(size int) *TMemoryBufferTransportFactory {
-	return &TMemoryBufferTransportFactory{size: size}
+	return NewTMemoryBufferTransportFactoryWithConfiguration(size, defaultConfiguration)
+}
+
+func NewTMemoryBufferTransportFactoryWithConfiguration(size int, config *TConfiguration) *TMemoryBufferTransportFactory {
+	return &TMemoryBufferTransportFactory{size: size, config: config}
 }
 
 func NewTMemoryBuffer() *TMemoryBuffer {
@@ -53,8 +64,12 @@ func NewTMemoryBuffer() *TMemoryBuffer {
 }
 
 func NewTMemoryBufferLen(size int) *TMemoryBuffer {
+	return NewTMemoryBufferLenWithConfiguration(size, defaultConfiguration)
+}
+
+func NewTMemoryBufferLenWithConfiguration(size int, config *TConfiguration) *TMemoryBuffer {
 	buf := make([]byte, 0, size)
-	return &TMemoryBuffer{Buffer: bytes.NewBuffer(buf), size: size}
+	return &TMemoryBuffer{TBaseTransport: NewTBaseTransport(config), Buffer: bytes.NewBuffer(buf), size: size}
 }
 
 func (p *TMemoryBuffer) IsOpen() bool {

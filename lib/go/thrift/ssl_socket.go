@@ -27,6 +27,7 @@ import (
 )
 
 type TSSLSocket struct {
+	*TBaseTransport
 	conn net.Conn
 	// hostPort contains host:port (e.g. "asdf.com:12345"). The field is
 	// only valid if addr is nil.
@@ -52,17 +53,23 @@ func NewTSSLSocketTimeout(hostPort string, cfg *tls.Config, timeout time.Duratio
 	if cfg.MinVersion == 0 {
 		cfg.MinVersion = tls.VersionTLS10
 	}
-	return &TSSLSocket{hostPort: hostPort, timeout: timeout, cfg: cfg}, nil
+	return &TSSLSocket{TBaseTransport: NewTBaseTransport(defaultConfiguration), hostPort: hostPort, timeout: timeout, cfg: cfg}, nil
 }
 
 // Creates a TSSLSocket from a net.Addr
 func NewTSSLSocketFromAddrTimeout(addr net.Addr, cfg *tls.Config, timeout time.Duration) *TSSLSocket {
-	return &TSSLSocket{addr: addr, timeout: timeout, cfg: cfg}
+	return &TSSLSocket{TBaseTransport: NewTBaseTransport(defaultConfiguration), addr: addr, timeout: timeout, cfg: cfg}
 }
 
 // Creates a TSSLSocket from an existing net.Conn
 func NewTSSLSocketFromConnTimeout(conn net.Conn, cfg *tls.Config, timeout time.Duration) *TSSLSocket {
-	return &TSSLSocket{conn: conn, addr: conn.RemoteAddr(), timeout: timeout, cfg: cfg}
+	return &TSSLSocket{TBaseTransport: NewTBaseTransport(defaultConfiguration), conn: conn, addr: conn.RemoteAddr(), timeout: timeout, cfg: cfg}
+}
+
+// SetConfiguration changes TSSLSocket's configuration from defaultConfiguration to config.
+// Can only be called before the socket is used. Calling it at any other time is undefined behaviour.
+func (p *TSSLSocket) SetConfiguration(config *TConfiguration) {
+	p.TBaseTransport = NewTBaseTransport(config)
 }
 
 // Sets the socket timeout

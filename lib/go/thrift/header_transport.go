@@ -231,6 +231,8 @@ const (
 // so the underlying transport should be a raw socket transports (TSocket or TSSLSocket),
 // instead of rich transports like TZlibTransport or TFramedTransport.
 type THeaderTransport struct {
+	*TBaseTransport
+
 	SequenceID int32
 	Flags      uint32
 
@@ -266,22 +268,28 @@ type THeaderTransport struct {
 
 var _ TTransport = (*THeaderTransport)(nil)
 
-// NewTHeaderTransport creates THeaderTransport from the underlying transport.
+// See NewTHeaderTransportWithConfiguration
+func NewTHeaderTransport(trans TTransport) *THeaderTransport {
+	return NewTHeaderTransportWithConfiguration(trans, defaultConfiguration)
+}
+
+// NewTHeaderTransportWithConfiguration creates THeaderTransport from the underlying transport.
 //
 // Please note that THeaderTransport handles framing and zlib by itself,
 // so the underlying transport should be the raw socket transports (TSocket or TSSLSocket),
 // instead of rich transports like TZlibTransport or TFramedTransport.
 //
 // If trans is already a *THeaderTransport, it will be returned as is.
-func NewTHeaderTransport(trans TTransport) *THeaderTransport {
+func NewTHeaderTransportWithConfiguration(trans TTransport, config *TConfiguration) *THeaderTransport {
 	if ht, ok := trans.(*THeaderTransport); ok {
 		return ht
 	}
 	return &THeaderTransport{
-		transport:    trans,
-		reader:       bufio.NewReader(trans),
-		writeHeaders: make(THeaderMap),
-		protocolID:   THeaderProtocolDefault,
+		TBaseTransport: NewTBaseTransport(config),
+		transport:      trans,
+		reader:         bufio.NewReader(trans),
+		writeHeaders:   make(THeaderMap),
+		protocolID:     THeaderProtocolDefault,
 	}
 }
 
@@ -701,12 +709,17 @@ func (t *THeaderTransport) isFramed() bool {
 type THeaderTransportFactory struct {
 	// The underlying factory, could be nil.
 	Factory TTransportFactory
+	config  *TConfiguration
 }
 
 // NewTHeaderTransportFactory creates a new *THeaderTransportFactory.
 func NewTHeaderTransportFactory(factory TTransportFactory) TTransportFactory {
+	return NewTHeaderTransportFactoryWithConfiguration(factory, defaultConfiguration)
+}
+func NewTHeaderTransportFactoryWithConfiguration(factory TTransportFactory, config *TConfiguration) TTransportFactory {
 	return &THeaderTransportFactory{
 		Factory: factory,
+		config:  config,
 	}
 }
 
@@ -720,4 +733,8 @@ func (f *THeaderTransportFactory) GetTransport(trans TTransport) (TTransport, er
 		return NewTHeaderTransport(t), nil
 	}
 	return NewTHeaderTransport(trans), nil
+}
+
+func (f *THeaderTransportFactory) GetConfiguration() *TConfiguration {
+	return f.config
 }

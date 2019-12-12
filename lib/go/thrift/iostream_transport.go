@@ -27,6 +27,7 @@ import (
 
 // StreamTransport is a Transport made of an io.Reader and/or an io.Writer
 type StreamTransport struct {
+	*TBaseTransport
 	io.Reader
 	io.Writer
 	isReadWriter bool
@@ -37,6 +38,8 @@ type StreamTransportFactory struct {
 	Reader       io.Reader
 	Writer       io.Writer
 	isReadWriter bool
+
+	config *TConfiguration
 }
 
 func (p *StreamTransportFactory) GetTransport(trans TTransport) (TTransport, error) {
@@ -55,7 +58,7 @@ func (p *StreamTransportFactory) GetTransport(trans TTransport) (TTransport, err
 			if t.Reader == nil && t.Writer != nil {
 				return NewStreamTransportW(t.Writer), nil
 			}
-			return &StreamTransport{}, nil
+			return &StreamTransport{TBaseTransport: NewTBaseTransport(defaultConfiguration)}, nil
 		}
 	}
 	if p.isReadWriter {
@@ -70,28 +73,48 @@ func (p *StreamTransportFactory) GetTransport(trans TTransport) (TTransport, err
 	if p.Reader == nil && p.Writer != nil {
 		return NewStreamTransportW(p.Writer), nil
 	}
-	return &StreamTransport{}, nil
+	return &StreamTransport{TBaseTransport: NewTBaseTransport(defaultConfiguration)}, nil
 }
 
-func NewStreamTransportFactory(reader io.Reader, writer io.Writer, isReadWriter bool) *StreamTransportFactory {
-	return &StreamTransportFactory{Reader: reader, Writer: writer, isReadWriter: isReadWriter}
+func NewStreamTransportFactory(r io.Reader, w io.Writer, isReadWriter bool) *StreamTransportFactory {
+	return NewStreamTransportFactoryWithConfiguration(r, w, isReadWriter, defaultConfiguration)
+}
+
+func NewStreamTransportFactoryWithConfiguration(r io.Reader, w io.Writer, isReadWriter bool, config *TConfiguration) *StreamTransportFactory {
+	return &StreamTransportFactory{Reader: r, Writer: w, isReadWriter: isReadWriter, config: config}
 }
 
 func NewStreamTransport(r io.Reader, w io.Writer) *StreamTransport {
-	return &StreamTransport{Reader: bufio.NewReader(r), Writer: bufio.NewWriter(w)}
+	return NewStreamTransportWithConfiguration(r, w, defaultConfiguration)
+}
+
+func NewStreamTransportWithConfiguration(r io.Reader, w io.Writer, config *TConfiguration) *StreamTransport {
+	return &StreamTransport{TBaseTransport: NewTBaseTransport(config), Reader: bufio.NewReader(r), Writer: bufio.NewWriter(w)}
 }
 
 func NewStreamTransportR(r io.Reader) *StreamTransport {
-	return &StreamTransport{Reader: bufio.NewReader(r)}
+	return NewStreamTransportRWithConfiguration(r, defaultConfiguration)
+}
+
+func NewStreamTransportRWithConfiguration(r io.Reader, config *TConfiguration) *StreamTransport {
+	return &StreamTransport{TBaseTransport: NewTBaseTransport(config), Reader: bufio.NewReader(r)}
 }
 
 func NewStreamTransportW(w io.Writer) *StreamTransport {
-	return &StreamTransport{Writer: bufio.NewWriter(w)}
+	return NewStreamTransportWWithConfiguration(w, defaultConfiguration)
+}
+
+func NewStreamTransportWWithConfiguration(w io.Writer, config *TConfiguration) *StreamTransport {
+	return &StreamTransport{TBaseTransport: NewTBaseTransport(config), Writer: bufio.NewWriter(w)}
 }
 
 func NewStreamTransportRW(rw io.ReadWriter) *StreamTransport {
+	return NewStreamTransportRWWithConfiguration(rw, defaultConfiguration)
+}
+
+func NewStreamTransportRWWithConfiguration(rw io.ReadWriter, config *TConfiguration) *StreamTransport {
 	bufrw := bufio.NewReadWriter(bufio.NewReader(rw), bufio.NewWriter(rw))
-	return &StreamTransport{Reader: bufrw, Writer: bufrw, isReadWriter: true}
+	return &StreamTransport{TBaseTransport: NewTBaseTransport(config), Reader: bufrw, Writer: bufrw, isReadWriter: true}
 }
 
 func (p *StreamTransport) IsOpen() bool {

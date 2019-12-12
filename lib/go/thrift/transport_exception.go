@@ -64,6 +64,10 @@ func NewTTransportException(t int, e string) TTransportException {
 	return &tTransportException{typeId: t, err: errors.New(e)}
 }
 
+func NewTTransportExceptionWithError(t int, err error) TTransportException {
+	return &tTransportException{typeId: t, err: err}
+}
+
 func NewTTransportExceptionFromError(e error) TTransportException {
 	if e == nil {
 		return nil

@@ -50,6 +50,9 @@ type TTransport interface {
 
 	// Returns true if the transport is open
 	IsOpen() bool
+
+	// Returns true if there is at least count bytes available in the input stream
+	BytesAvailable(count int64) bool
 }
 
 type stringWriter interface {
@@ -67,4 +70,7 @@ type TRichTransport interface {
 	stringWriter
 	ContextFlusher
 	ReadSizeProvider
+
+	// Returns true if there is at least count bytes available in the input stream
+	BytesAvailable(count int64) bool
 }

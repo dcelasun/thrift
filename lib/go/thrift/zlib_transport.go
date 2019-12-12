@@ -29,10 +29,13 @@ import (
 type TZlibTransportFactory struct {
 	level   int
 	factory TTransportFactory
+
+	config *TConfiguration
 }
 
 // TZlibTransport is a TTransport implementation that makes use of zlib compression.
 type TZlibTransport struct {
+	*TBaseTransport
 	reader    io.ReadCloser
 	transport TTransport
 	writer    *zlib.Writer
@@ -53,25 +56,37 @@ func (p *TZlibTransportFactory) GetTransport(trans TTransport) (TTransport, erro
 
 // NewTZlibTransportFactory constructs a new instance of NewTZlibTransportFactory
 func NewTZlibTransportFactory(level int) *TZlibTransportFactory {
-	return &TZlibTransportFactory{level: level, factory: nil}
+	return NewTZlibTransportFactoryWithFactoryWithConfiguration(level, nil, defaultConfiguration)
 }
 
 // NewTZlibTransportFactory constructs a new instance of TZlibTransportFactory
 // as a wrapper over existing transport factory
 func NewTZlibTransportFactoryWithFactory(level int, factory TTransportFactory) *TZlibTransportFactory {
-	return &TZlibTransportFactory{level: level, factory: factory}
+	return NewTZlibTransportFactoryWithFactoryWithConfiguration(level, factory, defaultConfiguration)
+}
+
+// NewTZlibTransportFactory constructs a new instance of TZlibTransportFactory
+// as a wrapper over existing transport factory
+func NewTZlibTransportFactoryWithFactoryWithConfiguration(level int, factory TTransportFactory, config *TConfiguration) *TZlibTransportFactory {
+	return &TZlibTransportFactory{level: level, factory: factory, config: config}
 }
 
 // NewTZlibTransport constructs a new instance of TZlibTransport
 func NewTZlibTransport(trans TTransport, level int) (*TZlibTransport, error) {
+	return NewTZlibTransportWithConfiguration(trans, level, defaultConfiguration)
+}
+
+// NewTZlibTransport constructs a new instance of TZlibTransport
+func NewTZlibTransportWithConfiguration(trans TTransport, level int, config *TConfiguration) (*TZlibTransport, error) {
 	w, err := zlib.NewWriterLevel(trans, level)
 	if err != nil {
 		return nil, err
 	}
 
 	return &TZlibTransport{
-		writer:    w,
-		transport: trans,
+		TBaseTransport: NewTBaseTransport(config),
+		writer:         w,
+		transport:      trans,
 	}, nil
 }
 
