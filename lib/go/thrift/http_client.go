@@ -209,6 +209,10 @@ func (p *THttpClient) Flush(ctx context.Context) error {
 	if err != nil {
 		return NewTTransportExceptionFromError(err)
 	}
+	if p.requestBuffer != nil {
+		p.requestBuffer.Reset()
+	}
+
 	if response.StatusCode != http.StatusOK {
 		// Close the response to avoid leaking file descriptors. closeResponse does
 		// more than just call Close(), so temporarily assign it and reuse the logic.
